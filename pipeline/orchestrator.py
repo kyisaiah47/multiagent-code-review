@@ -52,9 +52,16 @@ class Orchestrator:
             if not self._conflict_resolved(c.finding_a.id, c.finding_b.id, transcripts)
         ]
 
+        actual_rounds = max(
+            (m.round for msgs in transcripts.values() for m in msgs),
+            default=0,
+        )
+
         # Phase 4: moderator synthesis
         return await self.moderator.synthesize(
-            all_findings, transcripts, unresolved, filename
+            all_findings, transcripts, unresolved, filename,
+            total_conflicts=len(conflicts),
+            actual_debate_rounds=actual_rounds,
         )
 
     def _conflict_resolved(

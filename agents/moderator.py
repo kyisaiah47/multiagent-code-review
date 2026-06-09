@@ -32,6 +32,8 @@ class ModeratorAgent:
         debate_transcripts: dict[str, list[DebateMessage]],
         unresolved_conflicts: list[Conflict],
         filename: str,
+        total_conflicts: int = 0,
+        actual_debate_rounds: int = 0,
     ) -> ReviewResult:
         consensus_results = []
         for fid, finding in all_findings.items():
@@ -41,13 +43,9 @@ class ModeratorAgent:
 
         metrics = ReviewMetrics(
             agents_used=5,
-            debate_rounds=settings.max_debate_rounds,
-            conflicts_detected=len(unresolved_conflicts) + sum(
-                1 for r in consensus_results if r.debate_transcript
-            ),
-            conflicts_resolved=sum(
-                1 for r in consensus_results if r.debate_transcript and r.consensus_reached
-            ),
+            debate_rounds=actual_debate_rounds,
+            conflicts_detected=total_conflicts,
+            conflicts_resolved=total_conflicts - len(unresolved_conflicts),
             high_confidence_findings=sum(
                 1 for r in consensus_results if r.finding.confidence >= 0.8
             ),
@@ -118,8 +116,10 @@ class ModeratorAgent:
         updated_finding = finding.model_copy(
             update={"confidence": raw.get("updated_confidence", finding.confidence)}
         )
-        supporting = list({m.agent for m in transcript if m.stance.value != "agree"})
-        supporting.append(finding.category)
+        # Agents that held or partially held their position (support the finding)
+        supporting = list({finding.category, *[
+            m.agent for m in transcript if m.stance.value in ("maintain", "concede_partial")
+        ]})
 
         return ConsensusResult(
             finding=updated_finding,

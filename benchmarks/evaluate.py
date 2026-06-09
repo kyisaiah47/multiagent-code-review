@@ -55,7 +55,15 @@ KNOWN_ISSUES: dict[str, list[KnownIssue]] = {
         KnownIssue("samples/vulnerable.py", 35, "performance", "N+1 query in loop"),
         KnownIssue("samples/vulnerable.py", 48, "static", "swallowed exception"),
         KnownIssue("samples/vulnerable.py", 61, "security", "path traversal"),
-    ]
+    ],
+    "samples/async_bugs.py": [
+        KnownIssue("samples/async_bugs.py", 9, "static", "race condition on shared dict"),
+        KnownIssue("samples/async_bugs.py", 22, "performance", "sequential awaits should use asyncio.gather"),
+        KnownIssue("samples/async_bugs.py", 27, "performance", "blocking I/O in async function"),
+        KnownIssue("samples/async_bugs.py", 36, "static", "threading.Lock blocks event loop in async context"),
+    ],
+    # clean.py has no known issues — findings here are false positives
+    "samples/clean.py": [],
 }
 
 
@@ -81,10 +89,13 @@ async def run_benchmark(samples_dir: Path = Path("benchmarks/samples")) -> list[
         br.compute()
         results.append(br)
 
-        print(
-            f"  precision={br.precision:.0%}  recall={br.recall:.0%}  "
-            f"TP={br.true_positives}  FP={br.false_positives}  FN={br.false_negatives}"
-        )
+        if br.known_issues:
+            print(
+                f"  precision={br.precision:.0%}  recall={br.recall:.0%}  "
+                f"TP={br.true_positives}  FP={br.false_positives}  FN={br.false_negatives}"
+            )
+        else:
+            print(f"  (clean file)  false positives={br.false_positives}")
 
     return results
 

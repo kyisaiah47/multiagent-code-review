@@ -1,0 +1,80 @@
+name: Multi-Agent Code Review
+
+on:
+  pull_request:
+    paths:
+      - "**/*.py"
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.jsx"
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Get changed source files
+        id: files
+        run: |
+          FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD \
+            | grep -E '\.(py|js|ts|jsx|tsx)$' \
+            | grep -v '__pycache__' \
+            | head -8 \
+            | tr '\n' ' ')
+          echo "list=$FILES" >> "$GITHUB_OUTPUT"
+
+      - name: Run multi-agent review
+        if: steps.files.outputs.list != ''
+        env:
+          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+        run: |
+          mkdir -p /tmp/reviews
+          for file in ${{ steps.files.outputs.list }}; do
+            [ -f "$file" ] || continue
+            DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- "$file" 2>/dev/null || true)
+            SLUG=$(echo "$file" | tr '/' '_')
+            if [ -n "$DIFF" ]; then
+              python main.py review "$file" --diff "$DIFF" --output markdown \
+                > "/tmp/reviews/${SLUG}.md" 2>/dev/null || true
+            else
+              python main.py review "$file" --output markdown \
+                > "/tmp/reviews/${SLUG}.md" 2>/dev/null || true
+            fi
+          done
+          cat /tmp/reviews/*.md 2>/dev/null > /tmp/full_report.md \
+            || echo "No files produced output." > /tmp/full_report.md
+
+      - name: Post review comment
+        if: steps.files.outputs.list != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body;
+            try {
+              body = fs.readFileSync('/tmp/full_report.md', 'utf8').trim();
+            } catch (e) {
+              body = '';
+            }
+            if (!body) return;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
