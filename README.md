@@ -38,6 +38,8 @@ Multi-Agent Code Review orchestrates five specialist AI agents — Static Analys
 
 ### Architecture
 
+See [`architecture_diagram.md`](architecture_diagram.md) for the full system diagram.
+
 ```
 Input: source file + optional git diff
     │
@@ -92,6 +94,34 @@ python main.py review path/to/file.py --diff "$(git diff HEAD~1 path/to/file.py)
 python main.py serve
 # POST http://localhost:8000/review
 ```
+
+## ☁️ Deploy (Alibaba Cloud)
+
+The project ships a self-contained deployment script for [Alibaba Cloud Function Compute v3](https://www.alibabacloud.com/product/function-compute): [`deploy/alibaba_cloud.py`](deploy/alibaba_cloud.py).
+
+The script uses the Alibaba Cloud **FC** (Function Compute), **ECS**, and **credentials** SDKs to package the application, create or update a Function Compute service, and wire up the HTTP trigger — no manual console steps required.
+
+**Run it with:**
+
+```bash
+python deploy/alibaba_cloud.py
+```
+
+Credentials are read from the standard Alibaba Cloud environment variables (`ALIBABA_CLOUD_ACCESS_KEY_ID`, `ALIBABA_CLOUD_ACCESS_KEY_SECRET`) or from `~/.alibabacloud/credentials`.
+
+## 📊 Benchmarks
+
+A reproducible benchmark suite lives in [`benchmarks/evaluate.py`](benchmarks/evaluate.py). It runs the full multi-agent pipeline against three sample files (in `benchmarks/samples/`) that have a known set of ground-truth issues, then reports **precision** and **recall** for each specialist agent and for the consensus output.
+
+**Run the benchmarks:**
+
+```bash
+python benchmarks/evaluate.py
+```
+
+Results are printed to stdout as a table. No API mocking is used — the benchmark hits the live Qwen endpoints, so make sure `QWEN_API_KEY` is set in your `.env` before running.
+
+**For hackathon judges:** the three sample files cover a security vulnerability, a performance anti-pattern, and a missing-documentation case. Expected findings are defined inline in `evaluate.py` so you can verify the scoring logic at a glance.
 
 ## 📄 License
 
