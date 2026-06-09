@@ -1,26 +1,42 @@
-# Multi-Agent Code Review
+<div align="center">
 
-**Multi-agent code review system powered by specialist AI agents — built for the [Global AI Hackathon with Qwen Cloud](https://qwenhackathon.devpost.com/).**
+<!-- BANNER_PLACEHOLDER -->
 
-Track 3: Agent Society · Qwen Cloud
+# 🤝 Multi-Agent Code Review
 
----
+**Five specialist AI agents review your code concurrently, debate findings, and deliver a consensus report.**
 
-## What it does
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Qwen](https://img.shields.io/badge/Qwen%20Cloud-AI%20Powered-6B46C1?style=for-the-badge)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 
-Five specialist AI agents review your code concurrently, debate findings, and produce a consensus report — flagging what needs human attention when they disagree.
+</div>
 
-| Agent | Focus |
+<br/>
+
+Multi-Agent Code Review orchestrates five specialist AI agents — Static Analysis, Security, Performance, Documentation, and Test Coverage — that concurrently inspect your code and debate conflicting findings. A Moderator agent runs up to three rounds of consensus-building, escalating anything unresolved for human review. Built for the [Global AI Hackathon with Qwen Cloud](https://qwenhackathon.devpost.com/) (Track 3: Agent Society).
+
+## ✨ Features
+
+- **Concurrent specialist agents** — five agents review your code in parallel, each focused on a distinct concern (style, security, performance, docs, and test coverage)
+- **Debate-driven consensus** — a Moderator agent runs up to 3 rounds of structured debate to resolve conflicting findings before surfacing them
+- **Human escalation** — unresolved conflicts are flagged explicitly for human review so nothing slips through
+- **CLI + REST API** — review files directly from the terminal or integrate via a local FastAPI server
+- **Git diff support** — pass `git diff` output alongside a file to focus review on only what changed
+- **Rich terminal output** — findings rendered as a severity-sorted table with per-finding panels showing description, suggestion, evidence, and consensus status
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
 |---|---|
-| Static Analysis | Code smells, dead code, complexity, style |
-| Security | OWASP Top 10, injection, hardcoded secrets, auth flaws |
-| Performance | Algorithmic complexity, N+1 queries, memory leaks |
-| Documentation | Missing docstrings, unclear APIs, comment coverage |
-| Test Coverage | Missing test cases, untested branches, edge cases |
+| Orchestration & Moderation | `qwen-max` |
+| Specialist Agents | `qwen-plus` (×5) |
+| API Server | FastAPI |
+| Terminal UI | Rich |
+| Language | Python 3 |
 
-A **Moderator** runs up to 3 debate rounds when agents conflict. Findings that can't be resolved are escalated for human review.
-
-## Architecture
+### Architecture
 
 ```
 Input: source file + optional git diff
@@ -39,28 +55,12 @@ ModeratorAgent (qwen-max)
     │  up to 3 debate rounds on conflicting findings
     ▼
 ConsensusResult
-    ├── consensus_findings  (agreed findings with severity + confidence)
+    ├── consensus_findings   (agreed findings with severity + confidence)
     ├── unresolved_conflicts (escalated for human review)
-    └── metrics             (conflicts detected/resolved, human review flag)
+    └── metrics              (conflicts detected/resolved, human review flag)
 ```
 
-## Usage
-
-### CLI
-
-```bash
-python main.py review path/to/file.py
-python main.py review path/to/file.py --diff "$(git diff HEAD~1 path/to/file.py)"
-```
-
-### API server
-
-```bash
-python main.py serve
-# POST http://localhost:8000/review
-```
-
-## Getting started
+## 🚀 Getting Started
 
 ### 1. Install
 
@@ -69,22 +69,30 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Environment variables
+### 2. Configure
 
 ```bash
 cp .env.example .env
+# Set QWEN_API_KEY=your_key_here in .env
 ```
 
-```env
-QWEN_API_KEY=your_key_here
-```
-
-### 3. Run
+### 3. Review a file
 
 ```bash
-python main.py review yourfile.py
+# Review a file
+python main.py review path/to/file.py
+
+# Review with a git diff
+python main.py review path/to/file.py --diff "$(git diff HEAD~1 path/to/file.py)"
 ```
 
-## Output
+### 4. Run as an API server
 
-The CLI renders a rich terminal report: a summary table of all findings (severity, agent, line, confidence, consensus status) followed by detailed panels for each finding with description, suggestion, and evidence. Unresolved conflicts are called out separately for human review.
+```bash
+python main.py serve
+# POST http://localhost:8000/review
+```
+
+## 📄 License
+
+MIT
