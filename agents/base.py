@@ -32,6 +32,7 @@ class BaseAgent(ABC):
             ],
             response_format={"type": "json_object"},
             temperature=0.1,
+            max_tokens=512,
         )
         raw = json.loads(response.choices[0].message.content)
         findings = []
@@ -64,6 +65,7 @@ class BaseAgent(ABC):
             ],
             response_format={"type": "json_object"},
             temperature=0.1,
+            max_tokens=256,
         )
         return json.loads(response.choices[0].message.content)
 
@@ -72,8 +74,8 @@ class BaseAgent(ABC):
         if diff:
             parts.append(f"\nGit diff:\n```diff\n{diff}\n```")
         parts.append(
-            "\nReturn a JSON object with a 'findings' array. Each finding must have: "
-            "file, line (int or null), line_end (int or null), severity "
+            "\nReturn a JSON object with a 'findings' array (max 2 findings, most important only). "
+            "Each finding must have: file, line (int or null), line_end (int or null), severity "
             "(critical/high/medium/low/info), title, description, suggestion, "
             "confidence (0.0-1.0), evidence."
         )

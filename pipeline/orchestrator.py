@@ -38,7 +38,11 @@ class Orchestrator:
 
         async def _run_agent(role, agent):
             print(f"  → {role.value}: analyzing...", file=sys.stderr, flush=True)
-            findings = await agent.analyze(code, filename, diff)
+            try:
+                findings = await asyncio.wait_for(agent.analyze(code, filename, diff), timeout=45)
+            except asyncio.TimeoutError:
+                print(f"  ✗ {role.value}: timed out", file=sys.stderr, flush=True)
+                return []
             print(f"  ✓ {role.value}: {len(findings)} finding(s)", file=sys.stderr, flush=True)
             return findings
 

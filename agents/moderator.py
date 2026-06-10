@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 
 from openai import AsyncOpenAI
@@ -35,11 +36,10 @@ class ModeratorAgent:
         total_conflicts: int = 0,
         actual_debate_rounds: int = 0,
     ) -> ReviewResult:
-        consensus_results = []
-        for fid, finding in all_findings.items():
-            transcript = debate_transcripts.get(fid, [])
-            result = await self._build_consensus(finding, transcript)
-            consensus_results.append(result)
+        consensus_results = await asyncio.gather(*[
+            self._build_consensus(finding, debate_transcripts.get(fid, []))
+            for fid, finding in all_findings.items()
+        ])
 
         metrics = ReviewMetrics(
             agents_used=5,
@@ -111,6 +111,7 @@ class ModeratorAgent:
             ],
             response_format={"type": "json_object"},
             temperature=0.1,
+            max_tokens=256,
         )
         raw = json.loads(response.choices[0].message.content)
         updated_finding = finding.model_copy(

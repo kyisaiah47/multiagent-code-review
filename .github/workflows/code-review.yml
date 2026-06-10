@@ -50,10 +50,10 @@ jobs:
             SLUG=$(echo "$file" | tr '/' '_')
             if [ -n "$DIFF" ]; then
               python main.py review "$file" --diff "$DIFF" --output markdown --verbose \
-                > "/tmp/reviews/${SLUG}.md" 2>/dev/null || true
+                > "/tmp/reviews/${SLUG}.md" || true
             else
               python main.py review "$file" --output markdown --verbose \
-                > "/tmp/reviews/${SLUG}.md" 2>/dev/null || true
+                > "/tmp/reviews/${SLUG}.md" || true
             fi
           done
           cat /tmp/reviews/*.md 2>/dev/null > /tmp/full_report.md \
