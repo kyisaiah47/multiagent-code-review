@@ -49,10 +49,10 @@ jobs:
             DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- "$file" 2>/dev/null || true)
             SLUG=$(echo "$file" | tr '/' '_')
             if [ -n "$DIFF" ]; then
-              python main.py review "$file" --diff "$DIFF" --output markdown \
+              python main.py review "$file" --diff "$DIFF" --output markdown --verbose \
                 > "/tmp/reviews/${SLUG}.md" 2>/dev/null || true
             else
-              python main.py review "$file" --output markdown \
+              python main.py review "$file" --output markdown --verbose \
                 > "/tmp/reviews/${SLUG}.md" 2>/dev/null || true
             fi
           done
