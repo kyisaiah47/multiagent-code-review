@@ -33,18 +33,30 @@ class Orchestrator:
         diff: str | None = None,
     ) -> ReviewResult:
         # Phase 1: parallel specialist analysis
+        print(f"[phase 1/4] dispatching {len(self.specialists)} specialist agents in parallel...", flush=True)
+
+        async def _run_agent(role, agent):
+            print(f"  → {role.value}: analyzing...", flush=True)
+            findings = await agent.analyze(code, filename, diff)
+            print(f"  ✓ {role.value}: {len(findings)} finding(s)", flush=True)
+            return findings
+
         results = await asyncio.gather(
-            *[agent.analyze(code, filename, diff) for agent in self.specialists.values()]
+            *[_run_agent(role, agent) for role, agent in self.specialists.items()]
         )
         all_findings: dict[str, Finding] = {
             f.id: f for findings in results for f in findings
         }
+        print(f"[phase 1/4] complete — {len(all_findings)} total findings", flush=True)
 
         # Phase 2: conflict detection
+        print("[phase 2/4] detecting conflicts...", flush=True)
         conflicts = self.conflict_detector.detect(all_findings)
+        print(f"[phase 2/4] {len(conflicts)} conflict(s) found", flush=True)
 
         # Phase 3: debate rounds on conflicted findings
-        transcripts = await self.debate_engine.run(all_findings, conflicts, self.specialists)
+        print("[phase 3/4] running debate rounds...", flush=True)
+        transcripts = await self._run_debate_with_logging(all_findings, conflicts)
 
         # Track which conflicts stayed unresolved after debate
         unresolved = [
@@ -56,13 +68,40 @@ class Orchestrator:
             (m.round for msgs in transcripts.values() for m in msgs),
             default=0,
         )
+        print(f"[phase 3/4] debate complete — {len(conflicts) - len(unresolved)} resolved, {len(unresolved)} unresolved", flush=True)
 
         # Phase 4: moderator synthesis
-        return await self.moderator.synthesize(
+        print("[phase 4/4] moderator synthesizing consensus...", flush=True)
+        result = await self.moderator.synthesize(
             all_findings, transcripts, unresolved, filename,
             total_conflicts=len(conflicts),
             actual_debate_rounds=actual_rounds,
         )
+        print(f"[phase 4/4] done — {result.total_findings} findings, {result.metrics.requires_human_review} need human review", flush=True)
+        return result
+
+    async def _run_debate_with_logging(
+        self,
+        all_findings: dict[str, Finding],
+        conflicts: list,
+    ) -> dict:
+        if not conflicts:
+            print("  → no conflicts to debate", flush=True)
+            return {}
+        for i, conflict in enumerate(conflicts, 1):
+            print(
+                f"  → conflict {i}/{len(conflicts)}: "
+                f"{conflict.finding_a.category.value} vs {conflict.finding_b.category.value} "
+                f"({conflict.conflict_type})",
+                flush=True,
+            )
+        transcripts = await self.debate_engine.run(all_findings, conflicts, self.specialists)
+        rounds_run = max(
+            (m.round for msgs in transcripts.values() for m in msgs),
+            default=0,
+        )
+        print(f"  → {rounds_run} debate round(s) completed", flush=True)
+        return transcripts
 
     def _conflict_resolved(
         self,
