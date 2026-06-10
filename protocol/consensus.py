@@ -26,18 +26,12 @@ class ConflictDetector:
     def _check_conflict(self, fa: Finding, fb: Finding) -> Conflict | None:
         if fa.file != fb.file:
             return None
+        if fa.line is None or fb.line is None:
+            return None
 
-        location_conflict = self._location_overlap(fa, fb)
-        if location_conflict:
-            return Conflict(
-                finding_a=fa,
-                finding_b=fb,
-                conflict_type="location",
-                description=(
-                    f"{fa.category.value} and {fb.category.value} both flag "
-                    f"{fa.file} lines {fa.line}-{fa.line_end} vs {fb.line}-{fb.line_end}"
-                ),
-            )
+        # Only conflict if both agents flag the exact same line
+        if fa.line != fb.line:
+            return None
 
         semantic_conflict = self._semantic_contradiction(fa, fb)
         if semantic_conflict:
@@ -48,7 +42,16 @@ class ConflictDetector:
                 description=semantic_conflict,
             )
 
-        return None
+        # Different agents, same line — real location conflict worth debating
+        return Conflict(
+            finding_a=fa,
+            finding_b=fb,
+            conflict_type="location",
+            description=(
+                f"{fa.category.value} and {fb.category.value} both flag "
+                f"{fa.file} line {fa.line} from different angles"
+            ),
+        )
 
     def _location_overlap(self, fa: Finding, fb: Finding) -> bool:
         if fa.line is None or fb.line is None:

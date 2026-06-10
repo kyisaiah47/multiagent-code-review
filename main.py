@@ -87,7 +87,14 @@ def render_terminal(result: ReviewResult) -> None:
         console.print(f"\n[bold red]{len(result.unresolved_conflicts)} unresolved conflict(s) — manual review required[/bold red]")
 
 
-def render_markdown(result: ReviewResult) -> str:
+STANCE_EMOJI = {
+    "agree": "✅",
+    "maintain": "🔒",
+    "concede_partial": "🤝",
+}
+
+
+def render_markdown(result: ReviewResult, verbose: bool = False) -> str:
     m = result.metrics
     lines = [
         f"## Multi-Agent Code Review: `{result.filename}`",
@@ -114,6 +121,25 @@ def render_markdown(result: ReviewResult) -> str:
 
     for r in result.consensus_findings:
         f = r.finding
+        debate_block = []
+        if verbose and r.debate_transcript:
+            debate_block = [
+                "",
+                "<details>",
+                "<summary>🗣️ Debate transcript</summary>",
+                "",
+            ]
+            for msg in r.debate_transcript:
+                emoji = STANCE_EMOJI.get(msg.stance.value, "")
+                debate_block += [
+                    f"**Round {msg.round} — {msg.agent.value}** {emoji} `{msg.stance.value}` "
+                    f"(confidence → {msg.updated_confidence:.0%})",
+                    "",
+                    f"> {msg.reasoning}",
+                    "",
+                ]
+            debate_block += ["</details>", ""]
+
         lines += [
             "<details>",
             f"<summary><b>{f.severity.upper()}</b> &mdash; {f.title}"
@@ -126,7 +152,7 @@ def render_markdown(result: ReviewResult) -> str:
             f"> {f.evidence}",
             "",
             f"*{r.resolution}*",
-            "",
+            *debate_block,
             "</details>",
             "",
         ]
@@ -152,6 +178,7 @@ def review(
     path: Path = typer.Argument(..., help="File to review"),
     diff: str | None = typer.Option(None, "--diff", help="Git diff string"),
     output: OutputFormat = typer.Option(OutputFormat.terminal, "--output", help="Output format"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Include debate transcripts in output"),
 ) -> None:
     if not path.exists():
         console.print(f"[red]File not found: {path}[/red]")
@@ -167,7 +194,7 @@ def review(
     if output == OutputFormat.json:
         print(result.model_dump_json(indent=2))
     elif output == OutputFormat.markdown:
-        print(render_markdown(result))
+        print(render_markdown(result, verbose=verbose))
     else:
         render_terminal(result)
 
