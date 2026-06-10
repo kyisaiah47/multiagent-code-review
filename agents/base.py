@@ -32,7 +32,7 @@ class BaseAgent(ABC):
             ],
             response_format={"type": "json_object"},
             temperature=0.1,
-            max_tokens=512,
+            max_tokens=2048,
         )
         raw = json.loads(response.choices[0].message.content)
         findings = []
