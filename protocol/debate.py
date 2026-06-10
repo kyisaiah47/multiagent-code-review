@@ -33,10 +33,13 @@ class DebateEngine:
             if not agent_a or not agent_b:
                 return
 
-            a_response, b_response = await asyncio.gather(
-                agent_a.respond_to_challenge(conflict.finding_a, conflict.finding_b, 1),
-                agent_b.respond_to_challenge(conflict.finding_b, conflict.finding_a, 1),
-            )
+            try:
+                a_response, b_response = await asyncio.wait_for(asyncio.gather(
+                    agent_a.respond_to_challenge(conflict.finding_a, conflict.finding_b, 1),
+                    agent_b.respond_to_challenge(conflict.finding_b, conflict.finding_a, 1),
+                ), timeout=45)
+            except asyncio.TimeoutError:
+                return
             transcripts[fid_a].append(DebateMessage(
                 round=1, agent=conflict.finding_a.category,
                 target_finding_id=fid_a, challenger_finding_id=fid_b,
