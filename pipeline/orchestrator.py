@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 
 from agents.documentation import DocumentationAgent
 from agents.moderator import ModeratorAgent
@@ -33,12 +34,12 @@ class Orchestrator:
         diff: str | None = None,
     ) -> ReviewResult:
         # Phase 1: parallel specialist analysis
-        print(f"[phase 1/4] dispatching {len(self.specialists)} specialist agents in parallel...", flush=True)
+        print(f"[phase 1/4] dispatching {len(self.specialists)} specialist agents in parallel...", file=sys.stderr, flush=True)
 
         async def _run_agent(role, agent):
-            print(f"  → {role.value}: analyzing...", flush=True)
+            print(f"  → {role.value}: analyzing...", file=sys.stderr, flush=True)
             findings = await agent.analyze(code, filename, diff)
-            print(f"  ✓ {role.value}: {len(findings)} finding(s)", flush=True)
+            print(f"  ✓ {role.value}: {len(findings)} finding(s)", file=sys.stderr, flush=True)
             return findings
 
         results = await asyncio.gather(
@@ -47,15 +48,15 @@ class Orchestrator:
         all_findings: dict[str, Finding] = {
             f.id: f for findings in results for f in findings
         }
-        print(f"[phase 1/4] complete — {len(all_findings)} total findings", flush=True)
+        print(f"[phase 1/4] complete — {len(all_findings)} total findings", file=sys.stderr, flush=True)
 
         # Phase 2: conflict detection
-        print("[phase 2/4] detecting conflicts...", flush=True)
+        print("[phase 2/4] detecting conflicts...", file=sys.stderr, flush=True)
         conflicts = self.conflict_detector.detect(all_findings)
-        print(f"[phase 2/4] {len(conflicts)} conflict(s) found", flush=True)
+        print(f"[phase 2/4] {len(conflicts)} conflict(s) found", file=sys.stderr, flush=True)
 
         # Phase 3: debate rounds on conflicted findings
-        print("[phase 3/4] running debate rounds...", flush=True)
+        print("[phase 3/4] running debate rounds...", file=sys.stderr, flush=True)
         transcripts = await self._run_debate_with_logging(all_findings, conflicts)
 
         # Track which conflicts stayed unresolved after debate
@@ -68,16 +69,16 @@ class Orchestrator:
             (m.round for msgs in transcripts.values() for m in msgs),
             default=0,
         )
-        print(f"[phase 3/4] debate complete — {len(conflicts) - len(unresolved)} resolved, {len(unresolved)} unresolved", flush=True)
+        print(f"[phase 3/4] debate complete — {len(conflicts) - len(unresolved)} resolved, {len(unresolved)} unresolved", file=sys.stderr, flush=True)
 
         # Phase 4: moderator synthesis
-        print("[phase 4/4] moderator synthesizing consensus...", flush=True)
+        print("[phase 4/4] moderator synthesizing consensus...", file=sys.stderr, flush=True)
         result = await self.moderator.synthesize(
             all_findings, transcripts, unresolved, filename,
             total_conflicts=len(conflicts),
             actual_debate_rounds=actual_rounds,
         )
-        print(f"[phase 4/4] done — {result.total_findings} findings, {result.metrics.requires_human_review} need human review", flush=True)
+        print(f"[phase 4/4] done — {result.total_findings} findings, {result.metrics.requires_human_review} need human review", file=sys.stderr, flush=True)
         return result
 
     async def _run_debate_with_logging(
@@ -86,7 +87,7 @@ class Orchestrator:
         conflicts: list,
     ) -> dict:
         if not conflicts:
-            print("  → no conflicts to debate", flush=True)
+            print("  → no conflicts to debate", file=sys.stderr, flush=True)
             return {}
         for i, conflict in enumerate(conflicts, 1):
             print(
@@ -100,7 +101,7 @@ class Orchestrator:
             (m.round for msgs in transcripts.values() for m in msgs),
             default=0,
         )
-        print(f"  → {rounds_run} debate round(s) completed", flush=True)
+        print(f"  → {rounds_run} debate round(s) completed", file=sys.stderr, flush=True)
         return transcripts
 
     def _conflict_resolved(
