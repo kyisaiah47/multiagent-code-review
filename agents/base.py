@@ -37,8 +37,11 @@ class BaseAgent(ABC):
         raw = json.loads(response.choices[0].message.content)
         findings = []
         for f in raw.get("findings", []):
-            f.setdefault("category", self.role.value)
-            findings.append(Finding(**f))
+            try:
+                f.setdefault("category", self.role.value)
+                findings.append(Finding(**f))
+            except Exception:
+                continue
         return findings
 
     async def respond_to_challenge(

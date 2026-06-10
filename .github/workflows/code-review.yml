@@ -33,6 +33,7 @@ jobs:
         run: |
           FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD \
             | grep -E '\.(py|js|ts|jsx|tsx)$' \
+            | grep '^demo/' \
             | grep -v '__pycache__' \
             | head -8 \
             | tr '\n' ' ')
